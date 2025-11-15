@@ -79,15 +79,36 @@ Answer:"""
 
 def format_enhanced_target(sql_query: str) -> str:
     """
-    Format the target SQL with consistent structure.
+    Format the target SQL with consistent structure and END token.
     
     Args:
         sql_query: The target SQL query
     
     Returns:
-        Formatted target string
+        Formatted target string with <END> token
     """
-    return sql_query.strip()
+    return sql_query.strip() + " <END>"
+
+def extract_sql_from_output(generated_output: str) -> str:
+    """
+    Extract SQL query from generated output by finding <END> token.
+    
+    Args:
+        generated_output: The raw generated text from the model
+    
+    Returns:
+        Extracted SQL query without the <END> token
+    """
+    output = generated_output.strip()
+    
+    # Look for <END> token
+    if "<END>" in output:
+        sql = output.split("<END>")[0].strip()
+    else:
+        # Fallback: use the entire output if no <END> token found
+        sql = output
+    
+    return sql
 
 if __name__ == "__main__":
     # Test the schema extraction
@@ -105,3 +126,14 @@ if __name__ == "__main__":
     print("\n=== Enhanced Input Example ===")
     example_input = format_enhanced_input("show me flights from denver to philadelphia")
     print(example_input)
+    
+    print("\n=== Enhanced Target Example ===")
+    example_sql = "SELECT flight_id FROM flight WHERE from_city = 'DENVER' AND to_city = 'PHILADELPHIA'"
+    example_target = format_enhanced_target(example_sql)
+    print(f"Target: {example_target}")
+    
+    print("\n=== SQL Extraction Example ===")
+    mock_output = "SELECT flight_id FROM flight WHERE from_city = 'DENVER' <END> some extra text"
+    extracted = extract_sql_from_output(mock_output)
+    print(f"Generated: {mock_output}")
+    print(f"Extracted: {extracted}")

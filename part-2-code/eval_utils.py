@@ -7,6 +7,7 @@ including SQL generation and F1 score computation.
 
 import torch
 from utils import compute_record_F1, compute_records, read_queries
+from schema_utils import extract_sql_from_output
 
 
 def rerank_candidates_by_execution(candidates, target_sql=None, tokenizer=None):
@@ -133,7 +134,8 @@ def eval_epoch(model, dataloader, tokenizer, device, generation_max_length=256,
                     # Decode all candidates
                     candidates = []
                     for cand_id in candidate_ids:
-                        candidate_sql = tokenizer.decode(cand_id, skip_special_tokens=True).strip()
+                        candidate_raw = tokenizer.decode(cand_id, skip_special_tokens=True).strip()
+                        candidate_sql = extract_sql_from_output(candidate_raw)
                         candidates.append(candidate_sql)
                     
                     # Rerank candidates by execution success
@@ -141,18 +143,20 @@ def eval_epoch(model, dataloader, tokenizer, device, generation_max_length=256,
                     all_predictions.append(best_sql)
                 else:
                     # Standard single prediction
-                    generated_sql = tokenizer.decode(
+                    generated_raw = tokenizer.decode(
                         generated_ids[i], 
                         skip_special_tokens=True
                     ).strip()
+                    generated_sql = extract_sql_from_output(generated_raw)
                     all_predictions.append(generated_sql)
                 
                 # Get target SQL if available (for train/dev)
                 if decoder_targets is not None:
-                    target_sql = tokenizer.decode(
+                    target_raw = tokenizer.decode(
                         decoder_targets[i], 
                         skip_special_tokens=True
                     ).strip()
+                    target_sql = extract_sql_from_output(target_raw)
                     all_targets.append(target_sql)
             
             # Print progress every 10 batches
