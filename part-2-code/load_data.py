@@ -11,6 +11,8 @@ nltk.download('punkt')
 from transformers import T5TokenizerFast
 import torch
 
+from schema_utils import format_enhanced_input, format_enhanced_target
+
 PAD_IDX = 0
 
 class T5Dataset(Dataset):
@@ -44,9 +46,12 @@ class T5Dataset(Dataset):
         if split == "test":
             # Test set: only has natural language queries
             for i, nl_query in enumerate(nl_queries):
-                # Tokenize natural language input
+                # Create enhanced input with schema information and Answer: pattern
+                enhanced_input = format_enhanced_input(nl_query)
+                
+                # Tokenize enhanced input
                 encoder_input = tokenizer.encode(
-                    f"translate English to SQL: {nl_query}",
+                    enhanced_input,
                     return_tensors="pt",
                     truncation=True,
                     max_length=512
@@ -66,17 +71,21 @@ class T5Dataset(Dataset):
             assert len(nl_queries) == len(sql_queries), f"Mismatch in {split}: {len(nl_queries)} vs {len(sql_queries)}"
             
             for i, (nl_query, sql_query) in enumerate(zip(nl_queries, sql_queries)):
-                # Tokenize natural language input with T5 prefix
+                # Create enhanced input with schema information and Answer: pattern
+                enhanced_input = format_enhanced_input(nl_query)
+                
+                # Tokenize enhanced input
                 encoder_input = tokenizer.encode(
-                    f"translate English to SQL: {nl_query}",
+                    enhanced_input,
                     return_tensors="pt",
                     truncation=True,
                     max_length=512
                 ).squeeze(0)
                 
-                # Tokenize SQL target
+                # Format and tokenize SQL target
+                formatted_target = format_enhanced_target(sql_query)
                 decoder_target = tokenizer.encode(
-                    sql_query,
+                    formatted_target,
                     return_tensors="pt",
                     truncation=True,
                     max_length=512

@@ -74,6 +74,10 @@ def get_args():
                         help='Maximum generation length for SQL queries')
     parser.add_argument('--rerank_by_execution', action='store_true',
                         help='Rerank candidates by executing them on the database')
+    parser.add_argument('--use_schema_enhancement', action='store_true',
+                        help='Use enhanced input with database schema information and Answer: pattern')
+    parser.add_argument('--eval_every_n_epochs', type=int, default=1,
+                        help='Evaluate on dev set every N epochs (default: 1 = every epoch)')
 
     args = parser.parse_args()
     return args
@@ -133,8 +137,8 @@ def train(args, model, train_loader, dev_loader, optimizer, scheduler):
         tr_loss = train_epoch(args, model, train_loader, optimizer, scheduler)
         print(f"Epoch {epoch}: Average train loss was {tr_loss}")
 
-        # Only evaluate every 3 epochs (or on the last epoch) to speed up training
-        should_evaluate = (epoch % 3 == 0) or (epoch == args.max_n_epochs - 1)
+        # Evaluate based on user-specified frequency (or on the last epoch)
+        should_evaluate = (epoch % args.eval_every_n_epochs == 0) or (epoch == args.max_n_epochs - 1)
         
         if should_evaluate:
             print(f"Running dev evaluation at epoch {epoch}...")
@@ -144,7 +148,7 @@ def train(args, model, train_loader, dev_loader, optimizer, scheduler):
             print(f"Epoch {epoch}: Dev loss: {eval_loss}, Record F1: {record_f1}, Record EM: {record_em}, SQL EM: {sql_em}")
             print(f"Epoch {epoch}: {error_rate*100:.2f}% of the generated outputs led to SQL errors")
         else:
-            print(f"Skipping dev evaluation at epoch {epoch} (evaluating every 3 epochs)")
+            print(f"Skipping dev evaluation at epoch {epoch} (evaluating every {args.eval_every_n_epochs} epochs)")
             # Use previous best values for tracking
             eval_loss, record_f1, record_em, sql_em, error_rate = 0.0, best_f1, 0.0, 0.0, 0.0
 
