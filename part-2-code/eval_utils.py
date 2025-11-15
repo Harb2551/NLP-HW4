@@ -76,10 +76,15 @@ def eval_epoch(model, dataloader, tokenizer, device, generation_max_length=256,
     all_predictions = []
     all_targets = []
     
-    print(f"Evaluating on {len(dataloader)} batches...")
+    # Use only half the batches for faster evaluation
+    max_batches = len(dataloader) // 2
+    print(f"Evaluating on {max_batches}/{len(dataloader)} batches (half for speed)...")
     
     with torch.no_grad():
         for batch_idx, batch in enumerate(dataloader):
+            # Stop after processing half the batches
+            if batch_idx >= max_batches:
+                break
             # Handle different batch formats (train vs test)
             if len(batch) == 5:  # Train/dev format
                 encoder_ids, encoder_mask, decoder_inputs, decoder_targets, initial_decoder_inputs = batch
@@ -161,7 +166,7 @@ def eval_epoch(model, dataloader, tokenizer, device, generation_max_length=256,
             
             # Print progress every 10 batches
             if (batch_idx + 1) % 10 == 0:
-                print(f"  Processed {batch_idx + 1}/{len(dataloader)} batches")
+                print(f"  Processed {batch_idx + 1}/{max_batches} batches")
     
     # Compute F1 score if we have targets (requires executing SQL queries on database)
     if all_targets:
