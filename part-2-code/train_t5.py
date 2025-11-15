@@ -182,6 +182,11 @@ def train(args, model, train_loader, dev_loader, optimizer, scheduler):
             if record_f1 >= 0.99999:
                 print(f"Epoch {epoch}: Ignoring suspicious F1 score of {record_f1:.6f} (likely false positive)")
                 epochs_since_improvement += 1
+                # Save as best if we have no best model yet (prevent crash later)
+                if best_f1 < 0:
+                    print(f"Epoch {epoch}: No previous best model, saving this one to prevent crash")
+                    best_f1 = 0.01  # Small non-suspicious value
+                    epochs_since_improvement = 0
             elif record_f1 > best_f1:
                 best_f1 = record_f1
                 epochs_since_improvement = 0
