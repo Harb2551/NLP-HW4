@@ -1,0 +1,65 @@
+============================================================
+T5 TEXT-TO-SQL DATA ANALYSIS REPORT
+Generated on: 2025-11-14 19:17:22
+============================================================
+
+BASIC STATISTICS:
+--------------------
+Training examples: 4225
+Development examples: 466
+Total examples: 4691
+
+MEAN SEQUENCE LENGTHS (in tokens):
+-----------------------------------
+Training NL mean length: 17.10
+Training SQL mean length: 216.37
+Dev NL mean length: 17.07
+Dev SQL mean length: 210.05
+
+MAXIMUM SEQUENCE LENGTHS (in tokens):
+-------------------------------------
+Training NL max length: 59
+Training SQL max length: 510
+Dev NL max length: 43
+Dev SQL max length: 502
+
+VOCABULARY SIZES:
+-----------------
+Training NL vocabulary: 791
+Training SQL vocabulary: 555
+Dev NL vocabulary: 465
+Dev SQL vocabulary: 395
+Combined NL vocabulary: 814
+Combined SQL vocabulary: 558
+
+============================================================
+TABLES FOR ASSIGNMENT Q4
+============================================================
+
+Table 1: Data statistics BEFORE preprocessing
+---------------------------------------------
+Statistics Name                | Train    | Dev
+---------------------------------------------
+Number of examples             | 4225     | 466
+Mean sentence length           | 17.10    | 17.07
+Mean SQL query length          | 216.37   | 210.05
+Vocabulary size (natural lang) | 791      | 465
+Vocabulary size (SQL)          | 555      | 395
+---------------------------------------------
+
+Table 2: Data statistics AFTER preprocessing
+--------------------------------------------
+Model name: T5-small
+Statistics Name                | Train    | Dev
+--------------------------------------------
+(These will be filled after implementing preprocessing)
+Mean sentence length           | TBD      | TBD
+Mean SQL query length          | TBD      | TBD
+Vocabulary size (natural lang) | TBD      | TBD
+Vocabulary size (SQL)          | TBD      | TBD
+--------------------------------------------
+
+SAMPLE DATA EXAMPLES:
+---------------------
+(First 3 training examples will be added here)
+
