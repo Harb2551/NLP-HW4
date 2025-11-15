@@ -85,27 +85,27 @@ def format_enhanced_target(sql_query: str) -> str:
         sql_query: The target SQL query
     
     Returns:
-        Formatted target string with <END> token
+        Formatted target string with END token
     """
-    return sql_query.strip() + " <END>"
+    return sql_query.strip() + " END"
 
 def extract_sql_from_output(generated_output: str) -> str:
     """
-    Extract SQL query from generated output by finding <END> token.
+    Extract SQL query from generated output by finding END token.
     
     Args:
         generated_output: The raw generated text from the model
     
     Returns:
-        Extracted SQL query without the <END> token
+        Extracted SQL query without the END token
     """
     output = generated_output.strip()
     
-    # Look for <END> token
-    if "<END>" in output:
-        sql = output.split("<END>")[0].strip()
+    # Look for END token
+    if " END" in output:
+        sql = output.split(" END")[0].strip()
     else:
-        # Fallback: use the entire output if no <END> token found
+        # Fallback: use the entire output if no END token found
         sql = output
     
     return sql
@@ -133,7 +133,7 @@ if __name__ == "__main__":
     print(f"Target: {example_target}")
     
     print("\n=== SQL Extraction Example ===")
-    mock_output = "SELECT flight_id FROM flight WHERE from_city = 'DENVER' <END> some extra text"
+    mock_output = "SELECT flight_id FROM flight WHERE from_city = 'DENVER' END some extra text"
     extracted = extract_sql_from_output(mock_output)
     print(f"Generated: {mock_output}")
     print(f"Extracted: {extracted}")
