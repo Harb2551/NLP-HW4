@@ -174,7 +174,11 @@ def train(args, model, train_loader, dev_loader, optimizer, scheduler):
 
         # Only update best model when we actually evaluated
         if should_evaluate:
-            if record_f1 > best_f1:
+            # Ignore F1 scores of 1.0 as they're likely false positives from SQL error edge cases
+            if record_f1 >= 0.99999:
+                print(f"Epoch {epoch}: Ignoring suspicious F1 score of {record_f1:.6f} (likely false positive)")
+                epochs_since_improvement += 1
+            elif record_f1 > best_f1:
                 best_f1 = record_f1
                 epochs_since_improvement = 0
                 print(f"Epoch {epoch}: New best Record F1 = {best_f1:.4f} — saving best model")
