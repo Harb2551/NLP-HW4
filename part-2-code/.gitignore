@@ -131,11 +131,6 @@ wandb/
 *.ckpt
 *.pkl
 
-# Large data files
-*.db
-*.sqlite
-*.sqlite3
-
 # IDE files
 .vscode/
 .idea/
