@@ -133,42 +133,64 @@ def train(args, model, train_loader, dev_loader, optimizer, scheduler):
         tr_loss = train_epoch(args, model, train_loader, optimizer, scheduler)
         print(f"Epoch {epoch}: Average train loss was {tr_loss}")
 
-        eval_loss, record_f1, record_em, sql_em, error_rate = eval_epoch(args, model, dev_loader,
-                                                                         gt_sql_path, model_sql_path,
-                                                                         gt_record_path, model_record_path)
-        print(f"Epoch {epoch}: Dev loss: {eval_loss}, Record F1: {record_f1}, Record EM: {record_em}, SQL EM: {sql_em}")
-        print(f"Epoch {epoch}: {error_rate*100:.2f}% of the generated outputs led to SQL errors")
+        # Only evaluate every 3 epochs (or on the last epoch) to speed up training
+        should_evaluate = (epoch % 3 == 0) or (epoch == args.max_n_epochs - 1)
+        
+        if should_evaluate:
+            print(f"Running dev evaluation at epoch {epoch}...")
+            eval_loss, record_f1, record_em, sql_em, error_rate = eval_epoch(args, model, dev_loader,
+                                                                             gt_sql_path, model_sql_path,
+                                                                             gt_record_path, model_record_path)
+            print(f"Epoch {epoch}: Dev loss: {eval_loss}, Record F1: {record_f1}, Record EM: {record_em}, SQL EM: {sql_em}")
+            print(f"Epoch {epoch}: {error_rate*100:.2f}% of the generated outputs led to SQL errors")
+        else:
+            print(f"Skipping dev evaluation at epoch {epoch} (evaluating every 3 epochs)")
+            # Use previous best values for tracking
+            eval_loss, record_f1, record_em, sql_em, error_rate = 0.0, best_f1, 0.0, 0.0, 0.0
 
         if args.use_wandb:
             result_dict = {
                 'train/loss' : tr_loss,
-                'dev/loss' : eval_loss,
-                'dev/record_f1' : record_f1,
-                'dev/record_em' : record_em,
-                'dev/sql_em' : sql_em,
-                'dev/error_rate' : error_rate,
                 'train/lr' : current_lr,
             }
+            # Only log dev metrics when we actually evaluated
+            if should_evaluate:
+                result_dict.update({
+                    'dev/loss' : eval_loss,
+                    'dev/record_f1' : record_f1,
+                    'dev/record_em' : record_em,
+                    'dev/sql_em' : sql_em,
+                    'dev/error_rate' : error_rate,
+                })
             wandb.log(result_dict, step=epoch)
-            # Optionally track the generated files as artifacts
-            try:
-                wandb.save(model_sql_path)
-                wandb.save(model_record_path)
-            except Exception:
-                pass
+            
+            # Only save artifacts when we actually evaluated
+            if should_evaluate:
+                try:
+                    wandb.save(model_sql_path)
+                    wandb.save(model_record_path)
+                except Exception:
+                    pass
 
-        if record_f1 > best_f1:
-            best_f1 = record_f1
-            epochs_since_improvement = 0
-            print(f"Epoch {epoch}: New best Record F1 = {best_f1:.4f} — saving best model")
+        # Only update best model when we actually evaluated
+        if should_evaluate:
+            if record_f1 > best_f1:
+                best_f1 = record_f1
+                epochs_since_improvement = 0
+                print(f"Epoch {epoch}: New best Record F1 = {best_f1:.4f} — saving best model")
+            else:
+                epochs_since_improvement += 1
         else:
-            epochs_since_improvement += 1
+            # Don't count skipped evaluations toward patience
+            print(f"Epoch {epoch}: Skipped evaluation, patience counter unchanged ({epochs_since_improvement})")
 
         save_model(args.checkpoint_dir, model, best=False)
-        if epochs_since_improvement == 0:
+        if should_evaluate and epochs_since_improvement == 0:
             save_model(args.checkpoint_dir, model, best=True)
 
-        if epochs_since_improvement >= args.patience_epochs:
+        # Only check patience when we actually evaluated
+        if should_evaluate and epochs_since_improvement >= args.patience_epochs:
+            print(f"Early stopping: no improvement for {args.patience_epochs} evaluations")
             break
 
 def train_epoch(args, model, train_loader, optimizer, scheduler):
