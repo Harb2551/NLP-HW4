@@ -173,7 +173,9 @@ def eval_epoch(model, dataloader, tokenizer, device, generation_max_length=256,
         
         # Execute ground truth SQL queries to get records  
         print("  Executing ground truth SQL queries...")
-        gt_records, gt_errors = compute_records(all_targets)
+        # Clean ground truth SQL by removing <END> tokens before execution
+        clean_targets = [extract_sql_from_output(target) for target in all_targets]
+        gt_records, gt_errors = compute_records(clean_targets)
         
         # Compute F1 score based on database records (not SQL strings)
         f1_score = compute_record_F1(gt_records, pred_records)
