@@ -92,12 +92,13 @@ def format_enhanced_target(sql_query: str) -> str:
 def extract_sql_from_output(generated_output: str) -> str:
     """
     Extract SQL query from generated output by finding END token.
+    Apply post-processing to fix common errors.
     
     Args:
         generated_output: The raw generated text from the model
     
     Returns:
-        Extracted SQL query without the END token
+        Extracted and cleaned SQL query without the END token
     """
     output = generated_output.strip()
     
@@ -107,6 +108,95 @@ def extract_sql_from_output(generated_output: str) -> str:
     else:
         # Fallback: use the entire output if no END token found
         sql = output
+    
+    # Apply post-processing fixes
+    sql = fix_sql_syntax_errors(sql)
+    sql = deduplicate_table_aliases(sql)
+    
+    return sql
+
+def fix_sql_syntax_errors(sql: str) -> str:
+    """
+    Fix common SQL syntax errors in generated queries.
+    
+    Args:
+        sql: Raw SQL query string
+        
+    Returns:
+        SQL with syntax errors fixed
+    """
+    import re
+    
+    # Fix malformed AND/OR conditions: "AND(" -> "AND ("
+    sql = re.sub(r'\bAND\(', 'AND (', sql)
+    sql = re.sub(r'\bOR\(', 'OR (', sql)
+    
+    # Fix missing spaces around operators
+    sql = re.sub(r'(\w)=(\w)', r'\1 = \2', sql)
+    sql = re.sub(r'(\w)<(\w)', r'\1 < \2', sql)
+    sql = re.sub(r'(\w)>(\w)', r'\1 > \2', sql)
+    
+    # Fix missing comparison operators for time/numeric conditions
+    # Pattern: column_name followed by number without operator
+    # arrival_time 900 -> arrival_time < 900 (assume < for arrival times)
+    sql = re.sub(r'(\w+\.(?:arrival_time|departure_time))\s+(\d+)(?!\d)(?!\s*[=<>])', 
+                 r'\1 < \2', sql)
+    
+    # capacity 100 -> capacity >= 100 (assume >= for capacity)
+    sql = re.sub(r'(\w+\.capacity)\s+(\d+)(?!\d)(?!\s*[=<>])', 
+                 r'\1 >= \2', sql)
+    
+    # General numeric comparisons without operators - default to =
+    sql = re.sub(r'(\w+\.\w+)\s+(\d+)(?!\d)(?!\s*[=<>])', 
+                 r'\1 = \2', sql)
+    
+    return sql
+
+def deduplicate_table_aliases(sql: str) -> str:
+    """
+    Remove duplicate table aliases from FROM clause.
+    
+    Args:
+        sql: SQL query string
+        
+    Returns:
+        SQL with deduplicated table aliases
+    """
+    import re
+    
+    # Find FROM clause
+    from_match = re.search(r'FROM\s+(.+?)(?:\s+WHERE|$)', sql, re.IGNORECASE | re.DOTALL)
+    if not from_match:
+        return sql
+    
+    from_clause = from_match.group(1).strip()
+    
+    # Parse table alias pairs: "table_name alias_name"
+    table_alias_pairs = re.findall(r'(\w+)\s+(\w+_\d+)', from_clause)
+    
+    if not table_alias_pairs:
+        return sql  # No aliases found
+    
+    # Track seen aliases and build unique list
+    seen_aliases = set()
+    unique_pairs = []
+    
+    for table, alias in table_alias_pairs:
+        if alias not in seen_aliases:
+            unique_pairs.append(f"{table} {alias}")
+            seen_aliases.add(alias)
+        # Skip duplicates
+    
+    # Rebuild FROM clause with comma separation
+    new_from_clause = ", ".join(unique_pairs)
+    
+    # Replace the FROM clause in the original query
+    if "WHERE" in sql.upper():
+        replacement = f"FROM {new_from_clause} WHERE"
+        sql = re.sub(r'FROM\s+.+?\s+WHERE', replacement, sql, flags=re.IGNORECASE | re.DOTALL)
+    else:
+        replacement = f"FROM {new_from_clause}"
+        sql = re.sub(r'FROM\s+.+?$', replacement, sql, flags=re.IGNORECASE | re.DOTALL)
     
     return sql
 
@@ -137,3 +227,33 @@ if __name__ == "__main__":
     extracted = extract_sql_from_output(mock_output)
     print(f"Generated: {mock_output}")
     print(f"Extracted: {extracted}")
+    
+    print("\n=== Error Fixing Examples ===")
+    
+    # Test syntax error fixing
+    syntax_error_sql = "SELECT flight_id FROM flight WHERE city='DENVER' AND( arrival_time<900 )"
+    fixed_syntax = fix_sql_syntax_errors(syntax_error_sql)
+    print(f"Syntax Fix:")
+    print(f"  Before: {syntax_error_sql}")
+    print(f"  After:  {fixed_syntax}")
+    
+    # Test missing operator fixing
+    missing_op_sql = "SELECT flight_1.flight_id FROM flight flight_1 WHERE flight_1.arrival_time 900 AND flight_1.capacity 200"
+    fixed_operators = fix_sql_syntax_errors(missing_op_sql)
+    print(f"\nMissing Operator Fix:")
+    print(f"  Before: {missing_op_sql}")
+    print(f"  After:  {fixed_operators}")
+    
+    # Test duplicate alias fixing
+    dup_alias_sql = "SELECT DISTINCT flight_1.flight_id FROM flight flight_1, city city_1, airport_service airport_service_2, city city_1, airport_service airport_service_2 WHERE flight_1.from_airport = city_1.city_code"
+    fixed_aliases = deduplicate_table_aliases(dup_alias_sql)
+    print(f"\nAlias Deduplication:")
+    print(f"  Before: {dup_alias_sql}")
+    print(f"  After:  {fixed_aliases}")
+    
+    # Test combined fixing
+    combined_errors = "SELECT flight_1.flight_id FROM flight flight_1, city city_1, city city_1 WHERE city_1.city_name='DENVER' AND( flight_1.arrival_time<900 ) END"
+    fixed_combined = extract_sql_from_output(combined_errors)
+    print(f"\nCombined Fixes:")
+    print(f"  Before: {combined_errors}")
+    print(f"  After:  {fixed_combined}")

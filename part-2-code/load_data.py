@@ -36,8 +36,18 @@ class T5Dataset(Dataset):
         '''
         Load and process the natural language and SQL data
         '''
-        # Load natural language queries
-        nl_file = os.path.join(data_folder, f"{split}.nl")
+        # Load natural language queries - use preprocessed for training
+        if split == "train":
+            preprocessed_nl_file = os.path.join(data_folder, "train_preprocessed.nl")
+            if os.path.exists(preprocessed_nl_file):
+                print("📊 Using preprocessed training data for T5")
+                nl_file = preprocessed_nl_file
+            else:
+                print("📊 Using original training data for T5")
+                nl_file = os.path.join(data_folder, f"{split}.nl")
+        else:
+            nl_file = os.path.join(data_folder, f"{split}.nl")
+            
         with open(nl_file, 'r') as f:
             nl_queries = [line.strip() for line in f.readlines()]
         
@@ -64,7 +74,15 @@ class T5Dataset(Dataset):
                 })
         else:
             # Train/dev sets: have both NL queries and SQL targets
-            sql_file = os.path.join(data_folder, f"{split}.sql")
+            if split == "train":
+                preprocessed_sql_file = os.path.join(data_folder, "train_preprocessed.sql")
+                if os.path.exists(preprocessed_sql_file):
+                    sql_file = preprocessed_sql_file
+                else:
+                    sql_file = os.path.join(data_folder, f"{split}.sql")
+            else:
+                sql_file = os.path.join(data_folder, f"{split}.sql")
+                
             with open(sql_file, 'r') as f:
                 sql_queries = [line.strip() for line in f.readlines()]
             
@@ -181,8 +199,20 @@ def load_lines(path):
 def load_prompting_data(data_folder):
     # Load data for prompting approach (not T5)
     # This function is used by the prompting.py script
-    train_nl = load_lines(os.path.join(data_folder, 'train.nl'))
-    train_sql = load_lines(os.path.join(data_folder, 'train.sql'))
+    
+    # Use preprocessed training data if available, otherwise fall back to original
+    train_nl_file = os.path.join(data_folder, 'train_preprocessed.nl')
+    train_sql_file = os.path.join(data_folder, 'train_preprocessed.sql')
+    
+    if os.path.exists(train_nl_file) and os.path.exists(train_sql_file):
+        print("📊 Using preprocessed training data")
+        train_nl = load_lines(train_nl_file)
+        train_sql = load_lines(train_sql_file)
+    else:
+        print("📊 Using original training data")
+        train_nl = load_lines(os.path.join(data_folder, 'train.nl'))
+        train_sql = load_lines(os.path.join(data_folder, 'train.sql'))
+    
     dev_nl = load_lines(os.path.join(data_folder, 'dev.nl'))
     dev_sql = load_lines(os.path.join(data_folder, 'dev.sql'))
     test_nl = load_lines(os.path.join(data_folder, 'test.nl'))
