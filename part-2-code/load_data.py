@@ -12,6 +12,7 @@ from transformers import T5TokenizerFast
 import torch
 
 from schema_utils import format_enhanced_input, format_enhanced_target
+from sql_preprocessing import preprocess_sql_for_tokenization, preprocess_nl_for_tokenization
 
 PAD_IDX = 0
 
@@ -24,8 +25,57 @@ class T5Dataset(Dataset):
         self.split = split
         self.data_folder = data_folder
         
-        # Initialize T5 tokenizer
-        self.tokenizer = T5TokenizerFast.from_pretrained('google-t5/t5-small')
+        # Initialize SQL-optimized T5 tokenizer (create if needed)
+        sql_tokenizer_path = "./sql_optimized_tokenizer"
+        if os.path.exists(sql_tokenizer_path):
+            print("🚀 Using existing SQL-optimized tokenizer")
+            self.tokenizer = T5TokenizerFast.from_pretrained(sql_tokenizer_path)
+        else:
+            print("� Creating SQL-optimized tokenizer...")
+            self.tokenizer = self._create_sql_tokenizer(sql_tokenizer_path)
+    
+    def _create_sql_tokenizer(self, save_path):
+        """Create and save SQL-optimized tokenizer"""
+        
+        # Start with base tokenizer
+        tokenizer = T5TokenizerFast.from_pretrained('google-t5/t5-small')
+        
+        # SQL-specific vocabulary
+        sql_vocab = [
+            'SELECT_DISTINCT', 'SELECT', 'FROM', 'WHERE', 'AND_', 'OR_',
+            'JOIN', 'INNER_JOIN', 'LEFT_JOIN', 'ON', 'GROUP_BY', 'ORDER_BY',
+            'HAVING', 'COUNT', 'SUM', 'AVG', 'MAX', 'MIN',
+            '_=_', '_<_', '_>_', '_<=_', '_>=_', '_!=_',
+            'flight_1', 'flight_2', 'airport_1', 'airport_2', 'city_1', 'city_2',
+            'airline_1', 'ground_service_1', 'aircraft_1', 'fare_1', 'equipment_sequence_1',
+            'flight_fare_1', 'food_service_1', 'airport_service_1',
+            'flight_id', 'airport_code', 'city_code', 'departure_time', 'arrival_time',
+            'airline_code', 'aircraft_code', 'flight_number', 'from_airport', 'to_airport',
+            'city_name', 'state_code', 'transport_type', 'meal_code',
+            'flight_1.flight_id', 'flight_1.from_airport', 'flight_1.to_airport',
+            'flight_1.departure_time', 'flight_1.arrival_time', 'flight_1.airline_code',
+            'airport_1.airport_code', 'city_1.city_code', 'city_1.city_name',
+            "'BOS'", "'DEN'", "'ATL'", "'LAX'", "'JFK'", "'LGA'", "'SFO'", "'ORD'",
+            "'MIA'", "'SEA'", "'DFW'", "'PHX'", "'LAS'", "'CLT'", "'MKE'", "'PIT'",
+            "'BOSTON'", "'DENVER'", "'ATLANTA'", "'DALLAS'", "'NEW_YORK'", "'PHILADELPHIA'",
+            "'UA'", "'AA'", "'DL'", "'WN'", "'US'", "'NW'", "'CO'", "'AS'",
+            '800', '900', '1000', '1100', '1200', '1300', '1400', '1500', '1600', '1700', '1800',
+            "WHERE_1=1", "AND_1=1",
+        ]
+        
+        # Add new tokens
+        existing_vocab = tokenizer.get_vocab()
+        new_tokens = [token for token in sql_vocab if token not in existing_vocab]
+        
+        if new_tokens:
+            tokenizer.add_tokens(new_tokens)
+            print(f"Added {len(new_tokens)} SQL-specific tokens")
+        
+        # Save tokenizer
+        tokenizer.save_pretrained(save_path)
+        print(f"💾 Saved SQL tokenizer to {save_path}")
+        
+        return tokenizer
         
         # Process and load data
         self.data = self.process_data(data_folder, split, self.tokenizer)
@@ -56,8 +106,11 @@ class T5Dataset(Dataset):
         if split == "test":
             # Test set: only has natural language queries
             for i, nl_query in enumerate(nl_queries):
+                # Preprocess NL query for better tokenization
+                processed_nl = preprocess_nl_for_tokenization(nl_query)
+                
                 # Create enhanced input with schema information and Answer: pattern
-                enhanced_input = format_enhanced_input(nl_query)
+                enhanced_input = format_enhanced_input(processed_nl)
                 
                 # Tokenize enhanced input
                 encoder_input = tokenizer.encode(
@@ -89,8 +142,12 @@ class T5Dataset(Dataset):
             assert len(nl_queries) == len(sql_queries), f"Mismatch in {split}: {len(nl_queries)} vs {len(sql_queries)}"
             
             for i, (nl_query, sql_query) in enumerate(zip(nl_queries, sql_queries)):
+                # Preprocess queries for better tokenization
+                processed_nl = preprocess_nl_for_tokenization(nl_query)
+                processed_sql = preprocess_sql_for_tokenization(sql_query)
+                
                 # Create enhanced input with schema information and Answer: pattern
-                enhanced_input = format_enhanced_input(nl_query)
+                enhanced_input = format_enhanced_input(processed_nl)
                 
                 # Tokenize enhanced input
                 encoder_input = tokenizer.encode(
@@ -101,7 +158,7 @@ class T5Dataset(Dataset):
                 ).squeeze(0)
                 
                 # Format and tokenize SQL target
-                formatted_target = format_enhanced_target(sql_query)
+                formatted_target = format_enhanced_target(processed_sql)
                 decoder_target = tokenizer.encode(
                     formatted_target,
                     return_tensors="pt",
