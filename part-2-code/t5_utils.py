@@ -58,12 +58,18 @@ def initialize_model(args):
         
         # Check if we need to resize embeddings for SQL-optimized tokenizer
         from transformers import T5TokenizerFast
-        sql_tokenizer_path = "/Users/hb25/Desktop/HW_S3/NLP/HW4/hw4/hw4-code/part-2-code/sql_optimized_tokenizer"
+        sql_tokenizer_path = "./sql_optimized_tokenizer"
         if os.path.exists(sql_tokenizer_path):
-            print("🚀 Resizing model embeddings for SQL-optimized tokenizer...")
-            sql_tokenizer = T5TokenizerFast.from_pretrained(sql_tokenizer_path)
-            model.resize_token_embeddings(len(sql_tokenizer))
-            print(f"Model vocabulary resized to {len(sql_tokenizer)} tokens")
+            try:
+                print("🚀 Resizing model embeddings for SQL-optimized tokenizer...")
+                sql_tokenizer = T5TokenizerFast.from_pretrained(sql_tokenizer_path)
+                model.resize_token_embeddings(len(sql_tokenizer))
+                print(f"✅ Model vocabulary resized to {len(sql_tokenizer)} tokens")
+            except Exception as e:
+                print(f"⚠️ Failed to resize embeddings: {e}")
+                print("📊 Continuing with default vocabulary size")
+        else:
+            print("📊 Using default T5 vocabulary size")
     else:
         # Training from scratch: Use T5 config but randomly initialize weights
         print("Initializing T5 model from scratch...")
