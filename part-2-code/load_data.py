@@ -31,8 +31,13 @@ class T5Dataset(Dataset):
             print("🚀 Using existing SQL-optimized tokenizer")
             self.tokenizer = T5TokenizerFast.from_pretrained(sql_tokenizer_path)
         else:
-            print("� Creating SQL-optimized tokenizer...")
+            print("🔧 Creating SQL-optimized tokenizer...")
             self.tokenizer = self._create_sql_tokenizer(sql_tokenizer_path)
+        
+        # Process and load data
+        self.data = self.process_data(data_folder, split, self.tokenizer)
+        
+        print(f"Loaded {len(self.data)} examples for {split} split")
     
     def _create_sql_tokenizer(self, save_path):
         """Create and save SQL-optimized tokenizer"""
@@ -76,11 +81,6 @@ class T5Dataset(Dataset):
         print(f"💾 Saved SQL tokenizer to {save_path}")
         
         return tokenizer
-        
-        # Process and load data
-        self.data = self.process_data(data_folder, split, self.tokenizer)
-        
-        print(f"Loaded {len(self.data)} examples for {split} split")
 
     def process_data(self, data_folder, split, tokenizer):
         '''
