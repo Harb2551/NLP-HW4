@@ -284,7 +284,15 @@ def eval_epoch(args, model, dev_loader, gt_sql_pth, model_sql_path, gt_record_pa
     avg_loss = (total_loss / total_tokens) if total_tokens > 0 else 0.0
 
     # 2) Use eval_utils to generate predictions; then save and score with provided scripts
-    tokenizer = T5Tokenizer.from_pretrained('google-t5/t5-small')
+    # Use SQL-optimized tokenizer if available, otherwise default
+    from transformers import T5TokenizerFast
+    sql_tokenizer_path = "./sql_optimized_tokenizer"
+    if os.path.exists(sql_tokenizer_path):
+        print("🚀 Using SQL-optimized tokenizer for evaluation")
+        tokenizer = T5TokenizerFast.from_pretrained(sql_tokenizer_path)
+    else:
+        print("📊 Using default tokenizer for evaluation")
+        tokenizer = T5Tokenizer.from_pretrained('google-t5/t5-small')
     f1_from_util, predictions = eval_epoch_util(
         model=model,
         dataloader=dev_loader,
@@ -342,7 +350,16 @@ def test_inference(args, model, test_loader, model_sql_path, model_record_path):
     Reuses eval_utils.eval_epoch to generate predictions on test set, then saves SQL and records.
     '''
     model.eval()
-    tokenizer = T5Tokenizer.from_pretrained('google-t5/t5-small')
+    
+    # Use SQL-optimized tokenizer if available, otherwise default
+    from transformers import T5TokenizerFast
+    sql_tokenizer_path = "./sql_optimized_tokenizer"
+    if os.path.exists(sql_tokenizer_path):
+        print("🚀 Using SQL-optimized tokenizer for test inference")
+        tokenizer = T5TokenizerFast.from_pretrained(sql_tokenizer_path)
+    else:
+        print("📊 Using default tokenizer for test inference")
+        tokenizer = T5Tokenizer.from_pretrained('google-t5/t5-small')
 
     # Generate only; F1 will be None since no targets in test loader
     _, predictions = eval_epoch_util(
