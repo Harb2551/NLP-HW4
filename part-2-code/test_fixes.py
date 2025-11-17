@@ -1,3 +1,8 @@
+"""
+Removed: fix validation tests tied to custom tokenizer outputs.
+"""
+
+raise SystemExit("test_fixes.py removed as part of reverting custom tokenizer changes.")
 #!/usr/bin/env python3
 """
 Test SQL post-processing fixes on actual predicted queries

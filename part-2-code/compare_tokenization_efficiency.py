@@ -1,3 +1,8 @@
+"""
+Removed: tokenization efficiency comparison script for custom tokenizer.
+"""
+
+raise SystemExit("compare_tokenization_efficiency.py removed as part of reverting custom tokenizer changes.")
 #!/usr/bin/env python3
 """
 Compare tokenization efficiency between default and SQL-optimized tokenizers

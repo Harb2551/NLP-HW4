@@ -115,6 +115,8 @@ def extract_sql_from_output(generated_output: str) -> str:
     
     return sql
 
+    
+
 def fix_sql_syntax_errors(sql: str) -> str:
     """
     Fix common SQL syntax errors in generated queries.

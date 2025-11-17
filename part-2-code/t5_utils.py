@@ -55,21 +55,7 @@ def initialize_model(args):
         # Fine-tuning: Load pretrained T5 model
         print("Initializing T5 model for fine-tuning...")
         model = T5ForConditionalGeneration.from_pretrained('google-t5/t5-small')
-        
-        # Check if we need to resize embeddings for SQL-optimized tokenizer
-        from transformers import T5TokenizerFast
-        sql_tokenizer_path = "./sql_optimized_tokenizer"
-        if os.path.exists(sql_tokenizer_path):
-            try:
-                print("🚀 Resizing model embeddings for SQL-optimized tokenizer...")
-                sql_tokenizer = T5TokenizerFast.from_pretrained(sql_tokenizer_path)
-                model.resize_token_embeddings(len(sql_tokenizer))
-                print(f"✅ Model vocabulary resized to {len(sql_tokenizer)} tokens")
-            except Exception as e:
-                print(f"⚠️ Failed to resize embeddings: {e}")
-                print("📊 Continuing with default vocabulary size")
-        else:
-            print("📊 Using default T5 vocabulary size")
+        print(" Using default T5 vocabulary size")
     else:
         # Training from scratch: Use T5 config but randomly initialize weights
         print("Initializing T5 model from scratch...")
@@ -184,7 +170,8 @@ def load_model_from_checkpoint(args, best):
     print(f"Loading model from {checkpoint_path}")
     
     # Load checkpoint
-    checkpoint = torch.load(checkpoint_path, map_location=DEVICE)
+    # PyTorch 2.6 defaults to weights_only=True; we need full unpickling for config objects
+    checkpoint = torch.load(checkpoint_path, map_location=DEVICE, weights_only=False)
     
     # Initialize model with same config
     if args.finetune:
@@ -195,6 +182,8 @@ def load_model_from_checkpoint(args, best):
     # Load state dict
     model.load_state_dict(checkpoint['model_state_dict'])
     model.to(DEVICE)
+
+    # No custom tokenizer embedding resizing
     
     return model
 

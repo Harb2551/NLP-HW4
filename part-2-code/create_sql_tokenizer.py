@@ -1,3 +1,8 @@
+"""
+Removed: SQL-optimized tokenizer creation script.
+"""
+
+raise SystemExit("create_sql_tokenizer.py removed as part of reverting custom tokenizer changes.")
 #!/usr/bin/env python3
 """
 Create SQL-optimized tokenizer for better T5 performance

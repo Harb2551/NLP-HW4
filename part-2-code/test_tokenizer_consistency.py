@@ -1,3 +1,8 @@
+"""
+Removed: test tied to the custom tokenizer.
+"""
+
+raise SystemExit("test_tokenizer_consistency.py removed as part of reverting custom tokenizer changes.")
 #!/usr/bin/env python3
 """
 Test the tokenizer fix in training pipeline

@@ -79,7 +79,7 @@ def eval_epoch(model, dataloader, tokenizer, device, generation_max_length=256,
     # Use only half the batches for faster evaluation
     max_batches = len(dataloader) // 2
     print(f"Evaluating on {max_batches}/{len(dataloader)} batches (half for speed)...")
-    
+
     with torch.no_grad():
         for batch_idx, batch in enumerate(dataloader):
             # Stop after processing half the batches
@@ -157,13 +157,14 @@ def eval_epoch(model, dataloader, tokenizer, device, generation_max_length=256,
                 
                 # Get target SQL if available (for train/dev)
                 if decoder_targets is not None:
+                    # Decode target ids and strip END
                     target_raw = tokenizer.decode(
                         decoder_targets[i], 
                         skip_special_tokens=True
                     ).strip()
-                    target_sql = extract_sql_from_output(target_raw)
+                    target_sql = target_raw.replace(' END', '').strip()
                     all_targets.append(target_sql)
-            
+
             # Print progress every 10 batches
             if (batch_idx + 1) % 10 == 0:
                 print(f"  Processed {batch_idx + 1}/{max_batches} batches")
@@ -178,9 +179,8 @@ def eval_epoch(model, dataloader, tokenizer, device, generation_max_length=256,
         
         # Execute ground truth SQL queries to get records  
         print("  Executing ground truth SQL queries...")
-        # Clean ground truth SQL by removing <END> tokens before execution
-        clean_targets = [extract_sql_from_output(target) for target in all_targets]
-        gt_records, gt_errors = compute_records(clean_targets)
+        # Ground truth SQL is already cleaned in the processing loop above
+        gt_records, gt_errors = compute_records(all_targets)
         
         # Compute F1 score based on database records (not SQL strings)
         f1_score = compute_record_F1(gt_records, pred_records)

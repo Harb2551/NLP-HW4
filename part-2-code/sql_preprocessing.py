@@ -1,3 +1,8 @@
+"""
+Removed: SQL preprocessing utilities used only for the custom tokenizer.
+"""
+
+raise SystemExit("sql_preprocessing.py removed as part of reverting custom tokenizer changes.")
 #!/usr/bin/env python3
 """
 SQL preprocessing utilities for optimized tokenization

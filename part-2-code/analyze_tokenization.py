@@ -1,3 +1,8 @@
+"""
+Removed: analysis script specific to the custom tokenizer.
+"""
+
+raise SystemExit("analyze_tokenization.py removed as part of reverting custom tokenizer changes.")
 #!/usr/bin/env python3
 """
 Analyze T5 tokenization for SQL and explore improvements

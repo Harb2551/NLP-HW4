@@ -1,3 +1,8 @@
+"""
+Removed: compatibility test related to custom tokenizer changes.
+"""
+
+raise SystemExit("test_compatibility.py removed as part of reverting custom tokenizer changes.")
 #!/usr/bin/env python3
 """
 Test tokenizer and model compatibility before training
